@@ -1,4 +1,4 @@
-import { createPromise } from './common';
+
 import Notiflix from 'notiflix';
 
 
