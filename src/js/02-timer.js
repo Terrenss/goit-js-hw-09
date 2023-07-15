@@ -1,33 +1,18 @@
 
-
-
 import flatpickr from "flatpickr";
-
 import "flatpickr/dist/flatpickr.min.css";
+import Notiflix from 'notiflix';
 
-import { Notify } from 'notiflix/build/notiflix-notify-aio';
-
-const refs = {
-  btnStart: document.querySelector('button[data-start]'),
-  input: document.querySelector('#datetime-picker'),
-  days: document.querySelector('[data-days]'),
-  hours: document.querySelector('[data-hours]'),
-  minutes: document.querySelector('[data-minutes]'),
-  seconds: document.querySelector('[data-seconds]'),
-};
+const choiceDate = document.querySelector('#datetime-picker')
+const start = document.querySelector('[data-start]');
+const daysTimer = document.querySelector('[data-days]');
+const hoursTimer = document.querySelector('[data-hours]');
+const minutesTimer = document.querySelector('[data-minutes]');
+const secondsTimer = document.querySelector('[data-seconds]')
 
 
-refs.btnStart.addEventListener('click', onBtnClick);
+start.setAttribute('disabled', '');
 
-
-const INTERVAL = 1000;
-let timeInterval = null;
-refs.btnStart.setAttribute('disabled', true);
-
-
-let chosenDate = null;
-let actualDate = null;
-let timeToFinish = null;
 
 
 const options = {
@@ -35,67 +20,64 @@ const options = {
   time_24hr: true,
   defaultDate: new Date(),
   minuteIncrement: 1,
-  onClose(selectedDates) {
-    chosenDate = selectedDates[0];
-    actualDate = new Date();
-    timeToFinish = chosenDate - actualDate;
-
-    if (timeToFinish > 0) {
-      Notify.success('You can start countdown');
-      refs.btnStart.removeAttribute('disabled');
-    } else {
-      Notify.failure('Please choose a date in the future');
-      refs.btnStart.setAttribute('disabled', true);
-    }
+    onClose(selectedDates) {
+        if (selectedDates[0].getTime() < options.defaultDate.getTime()) {
+            Notiflix.Notify.failure("Please choose a date in the future");
+        } else {
+            start.removeAttribute('disabled')
+           
+            let ms = selectedDates[0].getTime() - options.defaultDate.getTime();
+           
+            let timerId = null;
+            start.addEventListener('click', () => {
+                start.setAttribute('disabled', '');
+                
+                timerId = setInterval(() => {
+                       
+                if (ms >= 1000) {
+                    ms = ms - 1000;
+                    const rezolt = convertMs(ms);
+                   
+                    daysTimer.textContent = rezolt.days;
+                    hoursTimer.textContent = rezolt.hours;
+                    minutesTimer.textContent = rezolt.minutes;
+                    secondsTimer.textContent = rezolt.seconds;
+                } else {
+                    clearInterval(timerId);
+                               
+                            }
+                  
+                 }, 1000);
+              
+            })
+             
+        }
+       
   },
 };
 
+choiceDate.addEventListener('focus', () => {
+    flatpickr(choiceDate, options); 
+    
+   })
 
-flatpickr(refs.input, options);
+function addLeadingZero(value) {
+     return String(value).padStart(2, '0')
+   }
 
-function onBtnClick() {
-  actualDate = new Date();
-  timeToFinish = chosenDate - actualDate;
-  if (timeToFinish > 0) {
-    Notify.success('We are starting countdown');
-    startCountdown();
-    refs.btnStart.setAttribute('disabled', true);
-    refs.input.setAttribute('disabled', true);
-  } else {
-    Notify.failure('Please choose a date in the future');
-    refs.btnStart.setAttribute('disabled', true);
-  }
-}
+function convertMs(ms) {
+      
+ 
+  const second = 1000;
+  const minute = second * 60;
+  const hour = minute * 60;
+  const day = hour * 24;
 
+ 
+  const days = addLeadingZero(Math.floor(ms / day));
+  const hours = addLeadingZero(Math.floor((ms % day) / hour));
+  const minutes = addLeadingZero(Math.floor(((ms % day) % hour) / minute));
+  const seconds = addLeadingZero(Math.floor((((ms % day) % hour) % minute) / second));
 
-function startCountdown() {
-  interfaceUpdate(addLeadingZero(convertMs(timeToFinish)));
-  timeInterval = setInterval(() => {
-    timeToFinish -= INTERVAL;
-
-    interfaceUpdate(addLeadingZero(convertMs(timeToFinish)));
-
-    if (timeToFinish < INTERVAL) {
-      stopCountdown();
-      Notify.success('TIME IS OVER');
-      refs.btnStart.removeAttribute('disabled');
-      refs.input.removeAttribute('disabled');
-    }
-  }, INTERVAL);
-}
-
-function stopCountdown() {
-  clearInterval(timeInterval);
-}
-
-function interfaceUpdate({
-  formatDays,
-  formatHours,
-  formatMinutes,
-  formatSeconds,
-}) {
-  refs.days.textContent = formatDays;
-  refs.hours.textContent = formatHours;
-  refs.minutes.textContent = formatMinutes;
-  refs.seconds.textContent = formatSeconds;
+  return { days, hours, minutes, seconds };
 }
